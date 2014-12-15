@@ -109,4 +109,7 @@ target/
 *.h5
 .ipynb_checkpoints
 
+# Mac
+*.DS_Store
+
 
