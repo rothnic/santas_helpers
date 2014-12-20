@@ -2,6 +2,7 @@ __author__ = 'rothnic'
 
 import numpy as np
 from numba import jit
+from data.data_utils import load_toy_orders
 import timeit
 
 # ToDo: precalculate key time periods ahead of time (sanctioned time)
@@ -10,10 +11,10 @@ NUM_TOYS = 10000000
 NUM_ELVES = 900
 BATCH_CYCLE = 30  # minutes
 
-def run_workshop(sanctioned_times):
+def run_workshop():
 
-    minute = 0
-
+    the_days = days('2014-01-01', 75)
+    toy_orders = load_toy_orders()
 
     toy_id = np.array((NUM_TOYS, 1))
     toy_duration = np.array((NUM_TOYS, 1))
@@ -29,15 +30,16 @@ def run_workshop(sanctioned_times):
     elf_resting_complete = np.array((NUM_ELVES, 1))
     elf_productivity = np.ones((NUM_ELVES, 1))
 
-    while np.any(toy_duration_left > 0):
+    #while np.any(toy_duration_left > 0):
+    for i in xrange(np.size(the_days)):
+
+        the_day = the_days[i]
 
         # Get all toys that haven't been processed and have arrived
-        batch_idx = get_batch(minute, toy_arrival_min, toy_processed)
+        batch_idx = get_batch(the_day, toy_arrival_min, toy_processed)
 
         if batch_idx is not None:
-            allocate_elfs(toy_id, toy_duration, elf_id, elf_working, elf_resting, elf_productivity)
-
-        minute += 1
+            allocate_elfs(toy_id, toy_duration, elf_id, elf_working, elf_resting, elf_productivity, elf_productivity)
 
         if work_hours():
             update_resting()
@@ -46,7 +48,7 @@ def run_workshop(sanctioned_times):
 
 
 def days(start_year, num_years):
-    start_year = np.datetime64(start_year, 'Y')
+    start_year = np.datetime64(start_year)
     delta = np.timedelta64(1, 'D')
     return np.array([start_year + delta*i for i in xrange(365*num_years)])
 
@@ -73,7 +75,7 @@ def get_batch(the_minute, arrival_minutes, toy_processed):
     return batch_idx
 
 
-def allocate_elfs(toy_ids, duration, somethingelse , working_prod, elf_ids, working, working_until, resting, productivity):
+def allocate_elfs(toy_ids, duration, elf_ids, working, working_until, resting, productivity):
     eligible = (working == False) and (resting == False)
     num_toys = len(toy_ids)
 
@@ -96,6 +98,4 @@ run_workshop_jit = jit(run_workshop)
 
 if __name__ == "__main__":
 
-    timeit.timeit("run_workshop()")
-    jitfunc = jit(run_workshop)
-    timeit.timeit("jitfunc()")
+    run_workshop()
