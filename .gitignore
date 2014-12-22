@@ -98,6 +98,9 @@ coverage.xml
 # Django stuff:
 *.log
 
+# Profiling Files
+*.prof
+
 # Sphinx documentation
 docs/_build/
 
