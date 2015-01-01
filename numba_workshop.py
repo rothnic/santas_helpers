@@ -16,6 +16,7 @@ PROD_REWARD = 1.02
 MIN_PROD = 0.25
 MAX_PROD = 4.0
 
+num_elves_resting = []
 
 def run_workshop():
     the_days = days('2014-01-01', 75)
@@ -35,10 +36,10 @@ def run_workshop():
 
     i = 0
     MAX_DAYS = np.size(the_days)
-    #MAX_DAYS = 5
+    # MAX_DAYS = 5
 
     # loop over each day
-    while i < MAX_DAYS and not np.all(toy_processed):
+    while i < MAX_DAYS:
 
         the_day = the_days[i]
         print(the_day)
@@ -71,16 +72,17 @@ def run_workshop():
 
                         # see if we have elves that can be used now
                         if np.any(np.logical_and(elf_working_until < the_minute, elf_resting_left <= 0.0)):
-
-                                # get a pairing between valid elfs and toys, where we have a reference to their indices
-                            elf_indices, toy_indices = allocate_elfs(the_minute, batch_idx, toy_duration, elf_working_until,
+                            # get a pairing between valid elfs and toys, where we have a reference to their indices
+                            elf_indices, toy_indices = allocate_elfs(the_minute, batch_idx, toy_duration,
+                                                                     elf_working_until,
                                                                      elf_resting_left, elf_productivity, eligible)
 
                             # set the times when these toys are complete
                             build_toys(the_minute, elf_indices, elf_productivity, elf_working_until, toy_indices,
                                        toy_duration, toy_completion, toy_processed)
 
-                            # figure out how long we must rest, and get the minutes that were worked in sanction/unsanctioned times
+                            # figure out how long we must rest, and get the minutes that were worked in
+                            # sanction/unsanctioned times
                             print("" + str(the_day) + " " + str(the_hour) + " " + str(the_minute))
                             sanctioned, unsanctioned = set_rest_minutes(the_hour, the_minute, elf_indices,
                                                                         elf_working_until, elf_resting_left)
@@ -183,10 +185,15 @@ def set_rest_minutes(the_hour, the_minute, elf_indices, working_until, resting_m
                 # see if we are still working
                 still_working = working_duration > 0
 
+    # Set the times they rest based on unsanctioned working
+    # Note, they only can rest after they have finished working
+    resting_minutes[elf_indices] = unsanctioned
+
     return sanctioned, unsanctioned
 
 
-def build_toys(the_minute, elf_indices, elf_productivity, elf_working_until, toy_indices, toy_duration, toy_completion, toy_processed):
+def build_toys(the_minute, elf_indices, elf_productivity, elf_working_until, toy_indices, toy_duration, toy_completion,
+               toy_processed):
     """
     Sets the time when the toy completes construction, based on assigned elf's productivity and toy's build duration
     :return:
@@ -208,6 +215,8 @@ def update_work(work_left, duration_left):
 
 
 def update_resting(elf_resting_left, elf_working_until, the_minute, amount=1.0):
+    global num_elves_resting
+    num_elves_resting.append(np.sum(elf_resting_left > 0))
     elf_resting_left[elf_working_until <= the_minute] -= amount
     elf_resting_left[elf_resting_left < 0] = 0.0
 
@@ -254,7 +263,7 @@ def get_batch_loop(the_time, arrival_minutes, toy_processed, batch_idx):
 
 def allocate_elfs(the_minute, batch_idx, duration, elf_working_until, elf_resting_left, productivity, eligible):
     eligible = np.logical_and((elf_working_until <= the_minute), (elf_resting_left <= 0.0), eligible)
-    # elig_elf_indices = np.where(eligible)[0]
+    elig_elf_indices = np.where(eligible)[0]
     toy_indices = np.where(batch_idx)[0]
 
     # get productivity of eligible elves
@@ -268,7 +277,12 @@ def allocate_elfs(the_minute, batch_idx, duration, elf_working_until, elf_restin
 
     # sort descending
     prod_sort = elig_prod.argsort()[::-1]
-    elig_elf_indices = prod_sort[:min(num_toys, prod_sort.size)]
+
+    # sort indices by productivity
+    elig_elf_indices = elig_elf_indices[prod_sort]
+
+    # get only number of indices as we have toys
+    elig_elf_indices = elig_elf_indices[:min(num_toys, elig_elf_indices.size)]
 
     return elig_elf_indices, toy_indices
 
