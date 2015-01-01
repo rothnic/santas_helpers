@@ -64,7 +64,7 @@ def run_workshop():
 
                 # loop over each minute so that we can continue to assign elves to short duration toys
                 for k in xrange(0, 60):
-                    the_minute += k
+                    the_minute += 1
 
                     update_resting(elf_resting_left, elf_working_until, the_minute)
 
